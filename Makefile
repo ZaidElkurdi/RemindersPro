@@ -1,3 +1,4 @@
+export THEOS_DEVICE_IP=128.54.249.78
 export GO_EASY_ON_ME=1
 export ARCHS = armv7 armv7s arm64
 export TARGET = iphone:clang:7.1:7.0

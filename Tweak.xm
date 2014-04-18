@@ -495,6 +495,88 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 %end
 
+%hook RemindersStandardListController
+
+- (void)setCellProperties:(RemindersCheckboxCell*)cell fromReminder:(EKReminder*)reminder ignoringTitle:(BOOL)arg3
+{
+	%orig(cell, reminder, arg3);
+	currReminder = [reminder retain];
+	currStore = [[[EKEventStore alloc] init] retain];
+	currCell = cell;
+
+	if(!currReminder.action)
+	{
+		objc_setAssociatedObject(cell, &reminderKey, [currReminder reminderIdentifier], OBJC_ASSOCIATION_RETAIN);
+		objc_setAssociatedObject(cell, &storeKey, currStore, OBJC_ASSOCIATION_RETAIN);
+
+
+		NSString *title = MSHookIvar<NSString*>(cell, "_title");
+		UILabel* &titleLabel = MSHookIvar<UILabel*>(cell, "_titleLabel");
+
+		NSString *compareText = [title lowercaseString];
+
+		NSString *phoneCompareKey = [[callKey lowercaseString] stringByAppendingString: @" "];
+		NSString *textCompareKey = [[textKey lowercaseString] stringByAppendingString: @" "];
+		NSString *emailCompareKey = [[emailKey lowercaseString] stringByAppendingString: @" "];
+		NSString *facetimeCompareKey = [[facetimeKey lowercaseString] stringByAppendingString: @" "];
+
+		if(title != NULL)
+		{
+			bool success=false;
+
+			if([compareText rangeOfString:phoneCompareKey].location != NSNotFound)
+			{
+				NSLog(@"It's a call!");
+				objc_setAssociatedObject(cell, &typeKey, @"1", OBJC_ASSOCIATION_RETAIN);
+				success = determinePerson(titleLabel.text, 1);
+			}
+
+			else if([compareText rangeOfString:textCompareKey].location != NSNotFound)
+			{
+				NSLog(@"It's a text!");
+				objc_setAssociatedObject(cell, &typeKey, @"2", OBJC_ASSOCIATION_RETAIN);
+				success = determinePerson(titleLabel.text, 2);
+			}
+
+			else if([compareText rangeOfString:emailCompareKey].location != NSNotFound)
+			{
+				NSLog(@"It's an email!");
+				objc_setAssociatedObject(cell, &typeKey, @"3", OBJC_ASSOCIATION_RETAIN);
+				success = determinePerson(titleLabel.text, 3);
+			}
+
+
+			else if([compareText rangeOfString:facetimeCompareKey].location != NSNotFound)
+			{
+				NSLog(@"It's a FaceTime!");
+				objc_setAssociatedObject(cell, &typeKey, @"4", OBJC_ASSOCIATION_RETAIN);
+				success = determinePerson(titleLabel.text, 4);
+			}
+
+			NSLog(@"Result: %d", success);
+		}
+	}
+
+	else
+	{
+		NSURL *action = reminder.action;
+		objc_setAssociatedObject(cell, &phoneKey, action, OBJC_ASSOCIATION_RETAIN);
+
+		if(shouldLongPress)
+		{
+			NSLog(@"Adding long press");
+			UILongPressGestureRecognizer* &longPressRecognizer = MSHookIvar<UILongPressGestureRecognizer*>(cell, "_actionPressRecognizer");
+			longPressRecognizer.minimumPressDuration = 0.5;
+			[longPressRecognizer addTarget:cell action:@selector(longPress:)];
+		}
+	}
+}
+/****** END LIST CONTROLLER ********
+********					*********
+********					********/
+
+%end
+
 %ctor
 {
 	class_addProtocol(objc_getClass("RemindersCheckboxCell"), objc_getProtocol("UITableViewDelegate"));
@@ -828,12 +910,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 %end
 
-%hook RemindersRecurrenceTypeViewController
-- (id)tableView:(id)arg1 cellForRowAtIndexPath:(id)arg2
-{
-}
+// %hook RemindersRecurrenceTypeViewController
+// - (id)tableView:(id)arg1 cellForRowAtIndexPath:(id)arg2
+// {
+// }
 
-- (void)tableView:(id)arg1 didSelectRowAtIndexPath:(id)arg2
-{
-}
-%end
+// - (void)tableView:(id)arg1 didSelectRowAtIndexPath:(id)arg2
+// {
+// }
+// %end
