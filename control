@@ -1,0 +1,10 @@
+Package: com.Zaid.remindersPro
+Name: Reminders Pro
+Depends: mobilesubstrate
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Adds new features to the Reminders app
+Maintainer: Zaid Elkurdi
+Author: Zaid Elkurdi
+Section: Tweaks
+Icon: file:///Library/PreferenceBundles/reminderPrefs.bundle/remindersIcon@2x.png

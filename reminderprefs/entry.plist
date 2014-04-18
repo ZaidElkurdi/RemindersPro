@@ -1,0 +1,10 @@
+{
+	entry = {
+		bundle = reminderPrefs;
+		cell = PSLinkCell;
+		detail = "reminderPrefsListController";
+		icon = "remindersIcon.png";
+		isController = 1;
+		label = "Reminders Pro";
+	};
+}
