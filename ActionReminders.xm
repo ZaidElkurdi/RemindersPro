@@ -346,7 +346,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 
 %hook RemindersScheduledListController
-
 - (void)setCellProperties:(RemindersCheckboxCell*)cell fromReminder:(EKReminder*)reminder ignoringTitle:(BOOL)arg3
 {
 	%orig(cell, reminder, arg3);
@@ -421,9 +420,10 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		}
 	}
 }
-/****** END LIST CONTROLLER ********
-********					*********
-********					********/
+
+/****** END SCHEDULED LIST CONTROLLER ********
+********							 *********
+********							 ********/
 
 %end
 
@@ -503,10 +503,9 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		}
 	}
 }
-/****** END LIST CONTROLLER ********
-********					*********
-********					********/
-
+/****** END STANDARD LIST CONTROLLER ********
+********							*********
+********							********/
 %end
 
 %ctor
@@ -541,13 +540,13 @@ bool determinePerson(NSString* rawText, NSInteger type)
     if(!facetimeKey)
     	facetimeKey = @"FaceTime";
 
-	NSLog(@"Being called!!");
-
 	%init;
 }
 
 
 %hook RemindersCheckboxCell
+
+/* UITableView Data Source */
 %new
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
@@ -589,6 +588,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	return 40;
 }
 
+/* UITableView Delegate */
 %new
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
@@ -645,7 +645,18 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 }
 
+/* For long press feature */
+%new
+- (void)longPress:(UIButton*)sender
+{
+	NSURL *actionURL = objc_getAssociatedObject(self, &phoneKey);
 
+	NSLog(@"url to open: %@", actionURL);
+
+	[[UIApplication sharedApplication] openURL:actionURL];
+}
+
+/* UIAlertView Delegate*/
 %new
 - (void)numberDisambiguationAlertView:(NSMutableArray*)phoneNumbers withLabels:(NSMutableArray*)phoneLabels forType:(int)type
 {
@@ -676,22 +687,9 @@ bool determinePerson(NSString* rawText, NSInteger type)
     }
 }
 
-%new
-- (void)longPress:(UIButton*)sender
-{
-	NSURL *actionURL = objc_getAssociatedObject(self, &phoneKey);
-
-	NSLog(@"url to open: %@", actionURL);
-
-	[[UIApplication sharedApplication] openURL:actionURL];
-}
-
-
-
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
 {
-	NSLog(@"BEING CALLED");
-    // the user clicked Call
+    //The user clicked action button
     if(alertView.tag == 1995)
     {
     	if(buttonIndex==1)
@@ -706,6 +704,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	    actionAlert = nil;
     }
 
+    //Set phone number from Number Picker
     else if(alertView.tag==117)
     {
     	NSMutableArray *numbers = objc_getAssociatedObject(self, &possibleNumbers);
@@ -735,7 +734,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
     	%orig(alertView, buttonIndex);
 }
 
-
+/* Clear associated objects to be safe */
 - (void)prepareForReuse
 {
 	%orig;
@@ -746,26 +745,21 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	objc_setAssociatedObject(self, &storeKey, nil, OBJC_ASSOCIATION_RETAIN);
 }
 
-- (void)_clearButtonTapped:(id)arg1
-{
-	%log;
-	NSLog(@"Calling tap");
-
-	%orig(arg1);
-}
-
+/* Tapped an action reminder */
 - (void)_tap:(id)arg1
 {
 	if(actionAlert == nil || !actionAlert)
 	{
 		NSLog(@"Action at Cell Tapped: %@", MSHookIvar<NSURL*>(self, "_actionURL"));
+
 		NSURL *action = MSHookIvar<NSURL*>(self, "_actionURL");
 		NSString *actionString = [action absoluteString];
 		actionString = [actionString stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+
 		NSArray *myWords = [actionString componentsSeparatedByString:@":"];
 		NSString *title = [myWords objectAtIndex:1];
 		title = [title stringByReplacingOccurrencesOfString:@"/" withString:@""];
-		NSArray *formatted = formatNumbers([NSArray arrayWithObject:title]);
+		NSArray *formatted = formatNumbers([[NSArray arrayWithObject:title] mutableCopy]);
 		title = [formatted objectAtIndex:0];
 
 		NSString *actionTitle = [myWords objectAtIndex:0];
@@ -778,268 +772,13 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		else if ([actionTitle rangeOfString:@"facetime"].location != NSNotFound)
 			actionTitle = @"Facetime";
 
-		NSLog(@"Made it here!");
-
 		actionAlert = [[UIAlertView alloc] initWithTitle:title
-		                                                    message:@"" 
-		                                                    delegate:self 
-		                                                    cancelButtonTitle:@"Cancel" 
-		                                                    otherButtonTitles:actionTitle, nil];
+                                            message:@"" 
+                                            delegate:self 
+                                            cancelButtonTitle:@"Cancel" 
+                                            otherButtonTitles:actionTitle, nil];
 		actionAlert.tag = 1995;
 		[actionAlert show];
 	}
-}
-
-
-%end
-
-%hook RemindersDetailEditorController
-- (void)viewDidAppear:(BOOL)arg1
-{
-	%log;
-	%orig(arg1);
-	RemindersTextEditCell *notesCell = MSHookIvar<RemindersTextEditCell*>(self, "_notesCell");
-	EKExpandingTextView *noteView = MSHookIvar<EKExpandingTextView*>(notesCell, "_expandingTextView");
-	NSLog(@"nc: %@", notesCell);
-	NSLog(@"nv: %@", noteView);
-
-	interceptView = [[UITextView alloc] initWithFrame:noteView.frame];
-	UITapGestureRecognizer *tapDetect = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(makeEditable:)];
-	interceptView.selectable = TRUE;
-	interceptView.editable = FALSE;
-	interceptView.scrollEnabled=FALSE;
-	interceptView.font = noteView.font;
-	interceptView.text = noteView.text;
-	interceptView.dataDetectorTypes = UIDataDetectorTypeAll;
-	[interceptView addGestureRecognizer:tapDetect];
-
-	[noteView.superview addSubview:interceptView];
-}
-
-- (id)initWithReminder:(EKReminder*)arg1
-{
-	currReminder = arg1;
-	return %orig(arg1);
-}
-
-%new
-- (void)textViewDidEndEditing:(UITextView *)textView
-{
-	interceptView.hidden = FALSE;
-}
-
-%new
-- (void)makeEditable:(id)sender
-{
-	RemindersTextEditCell *notesCell = MSHookIvar<RemindersTextEditCell*>(self, "_notesCell");
-	EKExpandingTextView *noteView = MSHookIvar<EKExpandingTextView*>(notesCell, "_expandingTextView");
-
-	interceptView.hidden = TRUE;
-	[noteView becomeFirstResponder];
-}
-
-- (void)textViewDidChange:(id)arg1
-{
-	%orig(arg1);
-	RemindersTextEditCell *notesCell = MSHookIvar<RemindersTextEditCell*>(self, "_notesCell");
-	EKExpandingTextView *noteView = MSHookIvar<EKExpandingTextView*>(notesCell, "_expandingTextView");
-
-	interceptView.text  = noteView.text;
-}
-
-%end
-
-%hook RemindersRecurrenceTypeViewController
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
-{
-	if(indexPath.row < 6)
-		return %orig;
-	else
-	{
-		NSString *AutoCompleteRowIdentifier = @"recurrenceCell";
-        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:AutoCompleteRowIdentifier];
-		if(cell == nil)
-		{
-			cell= [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:AutoCompleteRowIdentifier];
-		}
-
-		NSString *cellTitle;
-		switch(indexPath.row)
-		{
-			case 6:
-				cellTitle = @"Every Monday";
-				break;
-			case 7:
-				cellTitle = @"Every Tuesday";
-				break;
-			case 8:
-				cellTitle = @"Every Wednesday";
-				break;
-			case 9:
-				cellTitle = @"Every Thursday";
-				break;
-			case 10:
-				cellTitle = @"Every Friday";
-				break;
-			case 11:
-				cellTitle = @"Every Saturday";
-				break;
-			case 12:
-				cellTitle = @"Every Sunday";
-				break;
-			case 13:
-				cellTitle = @"Every Weekday";
-				break;
-			case 14:
-				cellTitle = @"Every Weekend";
-				break;
-			case 15:
-				cellTitle = @"Weekdays except Monday";
-				break;
-			case 16:
-				cellTitle = @"Weekdays except Tuesday";
-				break;
-			case 17:
-				cellTitle = @"Weekdays except Wednesday";
-				break;
-			case 18:
-				cellTitle = @"Weekdays except Thursday";
-				break;
-			case 19:
-				cellTitle = @"Weekdays except Friday";
-				break;
-			case 20:
-				cellTitle = @"Weekdays except Saturday";
-				break;
-			case 21:
-				cellTitle = @"Weekdays except Sunday";
-				break;
-		}
-
-		cell.textLabel.text = cellTitle;
-
-		return cell;
-	}
-}
-
-- (void)tableView:(UITableView*)tableView didSelectRowAtIndexPath:(NSIndexPath*)indexPath
-{
-	if(indexPath.row < 6)
-		%orig;
-
-	else
-	{
-		EKReminder *rowReminder = currReminder;
-
-			NSArray *days;
-			switch(indexPath.row)
-			{
-				case 6:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],nil];
-					break;
-				case 7:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:3],nil];
-					break;
-				case 8:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:4],nil];
-					break;
-				case 9:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:5],nil];
-					break;
-				case 10:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:6],nil];
-					break;
-				case 11:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:7],nil];
-					break;
-				case 12:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:1],nil];
-					break;
-				case 13:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];
-					break;
-				case 14:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:1],[EKRecurrenceDayOfWeek dayOfWeek:7],nil];
-					break;
-				case 15:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];
-					break;
-				case 16:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];;
-					break;
-				case 17:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];;
-					break;
-				case 18:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];
-					break;
-				case 19:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],nil];
-					break;
-				case 20:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:1],[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],nil];
-					break;
-				case 21:
-					days = [NSArray arrayWithObjects:[EKRecurrenceDayOfWeek dayOfWeek:2],[EKRecurrenceDayOfWeek dayOfWeek:3],[EKRecurrenceDayOfWeek dayOfWeek:4],[EKRecurrenceDayOfWeek dayOfWeek:5],[EKRecurrenceDayOfWeek dayOfWeek:6],[EKRecurrenceDayOfWeek dayOfWeek:7],nil];
-					break;
-			}
-
-			EKRecurrenceRule *rule = [[EKRecurrenceRule alloc] initRecurrenceWithFrequency:EKRecurrenceFrequencyDaily 
-			 interval:3 
-			 daysOfTheWeek:days
-	         daysOfTheMonth:nil 
-	         monthsOfTheYear:nil 
-	         weeksOfTheYear:nil 
-	         daysOfTheYear:nil 
-	         setPositions:nil 
-	         end:nil
-            ];
-
-			NSDateComponents *components = [[NSCalendar currentCalendar] components:NSCalendarUnitDay | NSCalendarUnitMonth | NSCalendarUnitYear fromDate:[NSDate date]];
-
-			/* Set the Reminder's properties */
-			EKEventStore *store = [[EKEventStore alloc] init];
-            EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:[rowReminder reminderIdentifier]];
-
-            if(data.dueDate==nil)
-            	data.dueDateComponents = components;
-
-            if([data.recurrenceRules count]>0)
-            	[data removeRecurrenceRule:[data.recurrenceRules objectAtIndex:0]];
-
-            [data addRecurrenceRule:rule];
-
-            NSError *saveError = nil;
-            [store saveReminder:data commit:YES error:&saveError];
-
-            NSLog(@"Error: %@",saveError);
-		}
-}
-
-- (NSInteger)tableView:(UITableView*)tableView numberOfRowsInSection:(NSInteger)section
-{
-	if(tableView.numberOfSections==2)
-	{
-		if(section==1)
-			return %orig+16;
-
-		return %orig;
-	}
-
-	return %orig+16;
-}
-
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
-{
-	return %orig;
-}
-
-- (void)_checkItemAtIndexPath:(NSIndexPath*)arg1
-{
-	%log;
-	NSLog(@"Checking row:%d in section:%d",arg1.row, arg1.section);
-	NSLog(@"currReminder: %@", currReminder);
-	NSLog(@"currReminder recurrence: %@",currReminder.recurrenceRules);
-	%orig(arg1);
 }
 %end

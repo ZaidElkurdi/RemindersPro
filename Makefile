@@ -6,7 +6,7 @@ export TARGET = iphone:clang:7.1:7.0
 include theos/makefiles/common.mk
 
 TWEAK_NAME = Reminders_Pro
-Reminders_Pro_FILES = Tweak.xm
+Reminders_Pro_FILES = ActionReminders.xm ClickableNotes.xm RepeatTimes.xm
 Reminders_Pro_FRAMEWORKS = UIKit AddressBook EventKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
