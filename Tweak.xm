@@ -40,7 +40,6 @@ static NSMutableArray* formatNumbers(NSMutableArray* numbers)
 
 static NSArray* cleanString(NSString* rawText, NSInteger type)
 {
-	NSLog(@"Cleaning string");
 	NSString *compareKey;
 
 	switch(type)
@@ -78,15 +77,11 @@ static NSArray* cleanString(NSString* rawText, NSInteger type)
 
 static bool determineNumber(ABRecordRef person, NSInteger type)
 {
-	NSLog(@"Determining number");
 	NSMutableArray *phoneNumbers = [[[NSMutableArray alloc] init] autorelease];
 	NSMutableArray *phoneLabels = [[[NSMutableArray alloc] init] autorelease];
 
-	NSLog(@"Made it to 0!");
-
 	ABMultiValueRef multiPhones = ABRecordCopyValue(person,kABPersonPhoneProperty);
 
-	NSLog(@"Made it to 1!");
 	for(CFIndex i=0;i<ABMultiValueGetCount(multiPhones);++i)
 	{
 		CFTypeRef phoneNumberRef = ABMultiValueCopyValueAtIndex(multiPhones, i);
@@ -98,7 +93,7 @@ static bool determineNumber(ABRecordRef person, NSInteger type)
 		[phoneLabels addObject:phoneLabel];
 		[phoneNumbers addObject:phoneNumber];
 	}
-	NSLog(@"Made it to 1!");
+
 	if([phoneNumbers count]>1)
 	{
 		[currCell numberDisambiguationAlertView:phoneNumbers withLabels:phoneLabels forType:type];
@@ -121,7 +116,6 @@ static bool determineNumber(ABRecordRef person, NSInteger type)
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 
 		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
-		NSLog(@"Commiting: %@", actionURL);
 		data.action = actionURL;
 		[currStore saveReminder:data commit:YES error:nil];
 
@@ -137,16 +131,12 @@ static bool determineNumber(ABRecordRef person, NSInteger type)
 
 static bool determineFacetime(ABRecordRef person)
 {
-	NSLog(@"Determining number");
 	NSMutableArray *phoneNumbers = [[[NSMutableArray alloc] init] autorelease];
 	NSMutableArray *phoneLabels = [[[NSMutableArray alloc] init] autorelease];
-
-	NSLog(@"Made it to 0!");
 
 	ABMultiValueRef multiPhones = ABRecordCopyValue(person,kABPersonPhoneProperty);
 	ABMultiValueRef multiEmails = ABRecordCopyValue(person,kABPersonEmailProperty);
 
-	NSLog(@"Made it to 1!");
 	for(CFIndex i=0;i<ABMultiValueGetCount(multiPhones);++i)
 	{
 		CFTypeRef phoneNumberRef = ABMultiValueCopyValueAtIndex(multiPhones, i);
@@ -171,7 +161,6 @@ static bool determineFacetime(ABRecordRef person)
 		[phoneNumbers addObject:phoneNumber];
 	}
 
-	NSLog(@"Made it to 1!");
 	if([phoneNumbers count]>1)
 	{
 		[currCell numberDisambiguationAlertView:phoneNumbers withLabels:phoneLabels forType:4];
@@ -189,7 +178,6 @@ static bool determineFacetime(ABRecordRef person)
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByReplacingOccurrencesOfString:@" " withString:@""]];
 
 		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
-		NSLog(@"Commiting: %@", actionURL);
 		data.action = actionURL;
 		[currStore saveReminder:data commit:YES error:nil];
 
@@ -204,15 +192,11 @@ static bool determineFacetime(ABRecordRef person)
 
 static bool determineEmail(ABRecordRef person)
 {
-	NSLog(@"Determining Email");
 	NSMutableArray *emailAddresses = [[[NSMutableArray alloc] init] autorelease];
 	NSMutableArray *emailLabels = [[[NSMutableArray alloc] init] autorelease];
 
-	NSLog(@"Made it to 0!");
-
 	ABMultiValueRef multiEmails = ABRecordCopyValue(person,kABPersonEmailProperty);
 
-	NSLog(@"Made it to 1!");
 	for(CFIndex i=0;i<ABMultiValueGetCount(multiEmails);++i)
 	{
 		CFTypeRef emailRef = ABMultiValueCopyValueAtIndex(multiEmails, i);
@@ -224,7 +208,7 @@ static bool determineEmail(ABRecordRef person)
 		[emailLabels addObject:emailLabel];
 		[emailAddresses addObject:emailAddress];
 	}
-	NSLog(@"Made it to 1!");
+
 	if([emailAddresses count]>1)
 	{
 		[currCell numberDisambiguationAlertView:emailAddresses withLabels:emailLabels forType:3];
@@ -241,7 +225,6 @@ static bool determineEmail(ABRecordRef person)
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 
 		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
-		NSLog(@"Commiting: %@", actionURL);
 		data.action = actionURL;
 		[currStore saveReminder:data commit:YES error:nil];
 
@@ -256,13 +239,10 @@ static bool determineEmail(ABRecordRef person)
 
 bool determinePerson(NSString* rawText, NSInteger type)
 {
-	NSLog(@"Determining Person");
-
 	if(currReminder.action==NULL)
 	{
 		rawText = [rawText lowercaseString];
 		NSArray *names = cleanString(rawText, type);
-		NSLog(@"String cleaned");
 		NSInteger numNames = [names count];
 
 		NSString *firstName = [names objectAtIndex:0];
@@ -271,18 +251,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		if(numNames>1)
 			lastName = [names objectAtIndex:1];
 
-		NSLog(@"A1");
 		ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(NULL, nil);
 		CFArrayRef people = ABAddressBookCopyPeopleWithName(addressBook, (CFStringRef)firstName);
 		ABRecordRef thePerson = NULL;
-		NSLog(@"B2");
-		NSLog(@"%ld contacts matched for %@!", CFArrayGetCount(people), firstName);
 
 		if(CFArrayGetCount(people)==1)
-		{
-			NSLog(@"B3");
 			thePerson = CFArrayGetValueAtIndex(people, 0);
-		}
 
 		else if(CFArrayGetCount(people)>1)
 		{
@@ -294,19 +268,14 @@ bool determinePerson(NSString* rawText, NSInteger type)
 			    [peopleArray addObject:(id)person];
 			}
 
-			NSLog(@"B4");
-
 			if(lastName != NULL)
 			{
 				for (CFIndex i = 0; i < CFArrayGetCount(people); i++)
 				{
 				    ABRecordRef person = CFArrayGetValueAtIndex(people, i);
 				    NSString *surname = [(NSString *)ABRecordCopyValue(person, kABPersonLastNameProperty) lowercaseString];
-				    NSLog(@"Comparing %@ and %@", lastName, surname);
 				    if ([lastName isEqualToString:surname])
 				    {
-				    	NSLog(@"B5");
-				    	NSLog(@"Last names matched");
 				    	thePerson = person;
 				    	break;
 				    }
@@ -314,19 +283,13 @@ bool determinePerson(NSString* rawText, NSInteger type)
 			}
 
 			else if(matchOnlyFirstName)
-			{
-				NSLog(@"B6");
 				thePerson = CFArrayGetValueAtIndex(people, 0);
-			}
 
 			CFRelease(people);
 		}
 
 		else
-		{
-			NSLog(@"No matches!");
 			return false;
-		}
 
 		bool hasContact;
 
@@ -376,21 +339,18 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 			if([compareText rangeOfString:phoneCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a call!");
 				objc_setAssociatedObject(cell, &typeKey, @"1", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 1);
 			}
 
 			else if([compareText rangeOfString:textCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a text!");
 				objc_setAssociatedObject(cell, &typeKey, @"2", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 2);
 			}
 
 			else if([compareText rangeOfString:emailCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's an email!");
 				objc_setAssociatedObject(cell, &typeKey, @"3", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 3);
 			}
@@ -398,12 +358,10 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 			else if([compareText rangeOfString:facetimeCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a FaceTime!");
 				objc_setAssociatedObject(cell, &typeKey, @"4", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 4);
 			}
 
-			NSLog(@"Result: %d", success);
 		}
 	}
 
@@ -414,7 +372,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 		if(shouldLongPress)
 		{
-			NSLog(@"Adding long press");
 			UILongPressGestureRecognizer* &longPressRecognizer = MSHookIvar<UILongPressGestureRecognizer*>(cell, "_actionPressRecognizer");
 			longPressRecognizer.minimumPressDuration = 0.5;
 			[longPressRecognizer addTarget:cell action:@selector(longPress:)];
@@ -458,21 +415,18 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 			if([compareText rangeOfString:phoneCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a call!");
 				objc_setAssociatedObject(cell, &typeKey, @"1", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 1);
 			}
 
 			else if([compareText rangeOfString:textCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a text!");
 				objc_setAssociatedObject(cell, &typeKey, @"2", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 2);
 			}
 
 			else if([compareText rangeOfString:emailCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's an email!");
 				objc_setAssociatedObject(cell, &typeKey, @"3", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 3);
 			}
@@ -480,12 +434,10 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 			else if([compareText rangeOfString:facetimeCompareKey].location != NSNotFound)
 			{
-				NSLog(@"It's a FaceTime!");
 				objc_setAssociatedObject(cell, &typeKey, @"4", OBJC_ASSOCIATION_RETAIN);
 				success = determinePerson(titleLabel.text, 4);
 			}
 
-			NSLog(@"Result: %d", success);
 		}
 	}
 
@@ -496,7 +448,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 		if(shouldLongPress)
 		{
-			NSLog(@"Adding long press");
 			UILongPressGestureRecognizer* &longPressRecognizer = MSHookIvar<UILongPressGestureRecognizer*>(cell, "_actionPressRecognizer");
 			longPressRecognizer.minimumPressDuration = 0.5;
 			[longPressRecognizer addTarget:cell action:@selector(longPress:)];
@@ -541,7 +492,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
     if(!facetimeKey)
     	facetimeKey = @"FaceTime";
 
-	NSLog(@"Being called!!");
 
 	%init;
 }
@@ -555,7 +505,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	NSMutableArray *labels = objc_getAssociatedObject(self, &possibleLabels);
 
 	NSMutableArray *formattedNumbers = formatNumbers(numbers);
-	NSLog(@"Finding cell title!");
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"numberCell"];
 
 	if(cell==nil)
@@ -595,7 +544,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	NSMutableArray *numbers = objc_getAssociatedObject(self, &possibleNumbers);
 	NSInteger type = tableView.tag;
 
-	NSLog(@"Type: %ld", type);
 	NSString *ident = objc_getAssociatedObject(self, &reminderKey);
 
 	NSString *urlToSet = [numbers objectAtIndex:indexPath.row];
@@ -626,19 +574,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 	EKEventStore *store = objc_getAssociatedObject(self, &storeKey);
 
-	NSLog(@"Store: %@", store);
 	EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:ident];
 
 	data.action = actionURL;
 
 	NSError *saveError = nil;
 	[store saveReminder:data commit:YES error:&saveError];
-
-	NSLog(@"After set");
-	NSLog(@"data: %@", data);
-	NSLog(@"Commiting: %@", actionURL);
-	NSLog(@"identifier: %@", ident);
-	NSLog(@"saveError: %@", saveError);
 
 	[disambiguationAlert dismissWithClickedButtonIndex:0 animated:YES];
 	disambiguationAlert = nil;
@@ -669,7 +610,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		myTable.dataSource = self;
 		myTable.tag = type;
 
-		NSLog(@"Self: %@",self);
 
 		[disambiguationAlert setValue:myTable forKey:@"accessoryView"];
 		[disambiguationAlert show];
@@ -681,7 +621,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 {
 	NSURL *actionURL = objc_getAssociatedObject(self, &phoneKey);
 
-	NSLog(@"url to open: %@", actionURL);
 
 	[[UIApplication sharedApplication] openURL:actionURL];
 }
@@ -690,15 +629,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
 {
-	NSLog(@"BEING CALLED");
     // the user clicked Call
     if(alertView.tag == 1995)
     {
     	if(buttonIndex==1)
     	{
 			NSURL *action = objc_getAssociatedObject(self, &phoneKey);
-
-			NSLog(@"action final: %@", action);
 
 	    	[[UIApplication sharedApplication] openURL:action];
 	    }
@@ -746,19 +682,11 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	objc_setAssociatedObject(self, &storeKey, nil, OBJC_ASSOCIATION_RETAIN);
 }
 
-- (void)_clearButtonTapped:(id)arg1
-{
-	%log;
-	NSLog(@"Calling tap");
-
-	%orig(arg1);
-}
 
 - (void)_tap:(id)arg1
 {
 	if(actionAlert == nil || !actionAlert)
 	{
-		NSLog(@"Action at Cell Tapped: %@", MSHookIvar<NSURL*>(self, "_actionURL"));
 		NSURL *action = MSHookIvar<NSURL*>(self, "_actionURL");
 		NSString *actionString = [action absoluteString];
 		actionString = [actionString stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
@@ -777,8 +705,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 			actionTitle = @"Email";
 		else if ([actionTitle rangeOfString:@"facetime"].location != NSNotFound)
 			actionTitle = @"Facetime";
-
-		NSLog(@"Made it here!");
 
 		actionAlert = [[UIAlertView alloc] initWithTitle:title
 		                                                    message:@"" 
@@ -800,8 +726,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	%orig(arg1);
 	RemindersTextEditCell *notesCell = MSHookIvar<RemindersTextEditCell*>(self, "_notesCell");
 	EKExpandingTextView *noteView = MSHookIvar<EKExpandingTextView*>(notesCell, "_expandingTextView");
-	NSLog(@"nc: %@", notesCell);
-	NSLog(@"nv: %@", noteView);
 
 	interceptView = [[UITextView alloc] initWithFrame:noteView.frame];
 	UITapGestureRecognizer *tapDetect = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(makeEditable:)];
@@ -1012,7 +936,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
             NSError *saveError = nil;
             [store saveReminder:data commit:YES error:&saveError];
 
-            NSLog(@"Error: %@",saveError);
 		}
 }
 
@@ -1037,9 +960,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 - (void)_checkItemAtIndexPath:(NSIndexPath*)arg1
 {
 	%log;
-	NSLog(@"Checking row:%d in section:%d",arg1.row, arg1.section);
-	NSLog(@"currReminder: %@", currReminder);
-	NSLog(@"currReminder recurrence: %@",currReminder.recurrenceRules);
 	%orig(arg1);
 }
 %end
