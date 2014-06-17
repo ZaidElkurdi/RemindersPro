@@ -2,7 +2,7 @@
 
 static NSMutableArray* formatNumbers(NSMutableArray* numbers)
 {
-	NSMutableArray *formatted = [[NSMutableArray alloc] init];
+	NSMutableArray *formatted = [[[NSMutableArray alloc] init] autorelease];
 
 	for(NSString* number in numbers)
 	{
@@ -60,19 +60,7 @@ static NSArray* cleanString(NSString* rawText, NSInteger type)
 
 	NSString *namesText = [rawText stringByReplacingOccurrencesOfString:compareKey withString:@""];
 
-	namesText = [[NSString alloc] initWithData: 
-		[namesText dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:YES] encoding:NSASCIIStringEncoding];
-
-	if ([namesText rangeOfString:@" "].location == NSNotFound)
-	{
-		return [NSArray arrayWithObject:namesText];
-	}
-
-	else
-	{
-		NSArray* firstAndLast = [namesText componentsSeparatedByString:@" "];
-		return firstAndLast;
-	}
+	return [NSArray arrayWithObject:namesText];
 }
 
 static bool determineNumber(ABRecordRef person, NSInteger type)
@@ -115,9 +103,11 @@ static bool determineNumber(ABRecordRef person, NSInteger type)
 
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 
-		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
+		EKEventStore *store = [[EKEventStore alloc] init];
+		EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:[currReminder reminderIdentifier]];
 		data.action = actionURL;
-		[currStore saveReminder:data commit:YES error:nil];
+		[store saveReminder:data commit:YES error:nil];
+		[store release];
 
 		return true;
 	}
@@ -177,9 +167,11 @@ static bool determineFacetime(ABRecordRef person)
 
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByReplacingOccurrencesOfString:@" " withString:@""]];
 
-		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
+		EKEventStore *store = [[EKEventStore alloc] init];
+		EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:[currReminder reminderIdentifier]];
 		data.action = actionURL;
-		[currStore saveReminder:data commit:YES error:nil];
+		[store saveReminder:data commit:YES error:nil];
+		[store release];
 
 		return true;
 	}
@@ -224,9 +216,11 @@ static bool determineEmail(ABRecordRef person)
 
 		NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 
-		EKReminder *data = (EKReminder*)[currStore calendarItemWithIdentifier:[currReminder reminderIdentifier]];
+		EKEventStore *store = [[EKEventStore alloc] init];
+		EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:[currReminder reminderIdentifier]];
 		data.action = actionURL;
-		[currStore saveReminder:data commit:YES error:nil];
+		[store saveReminder:data commit:YES error:nil];
+		[store release];
 
 		return true;
 	}
@@ -246,7 +240,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		NSInteger numNames = [names count];
 
 		NSString *firstName = [names objectAtIndex:0];
-		NSString *lastName = NULL;
+		NSString *lastName = NULL; 
 
 		if(numNames>1)
 			lastName = [names objectAtIndex:1];
@@ -254,6 +248,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
 		ABAddressBookRef addressBook = ABAddressBookCreateWithOptions(NULL, nil);
 		CFArrayRef people = ABAddressBookCopyPeopleWithName(addressBook, (CFStringRef)firstName);
 		ABRecordRef thePerson = NULL;
+
 
 		if(CFArrayGetCount(people)==1)
 			thePerson = CFArrayGetValueAtIndex(people, 0);
@@ -314,13 +309,11 @@ bool determinePerson(NSString* rawText, NSInteger type)
 {
 	%orig(cell, reminder, arg3);
 	currReminder = [reminder retain];
-	currStore = [[[EKEventStore alloc] init] retain];
 	currCell = cell;
 
 	if(!currReminder.action)
 	{
 		objc_setAssociatedObject(cell, &reminderKey, [currReminder reminderIdentifier], OBJC_ASSOCIATION_RETAIN);
-		objc_setAssociatedObject(cell, &storeKey, currStore, OBJC_ASSOCIATION_RETAIN);
 
 
 		NSString *title = MSHookIvar<NSString*>(cell, "_title");
@@ -390,13 +383,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 {
 	%orig(cell, reminder, arg3);
 	currReminder = [reminder retain];
-	currStore = [[[EKEventStore alloc] init] retain];
 	currCell = cell;
 
 	if(!currReminder.action)
 	{
 		objc_setAssociatedObject(cell, &reminderKey, [currReminder reminderIdentifier], OBJC_ASSOCIATION_RETAIN);
-		objc_setAssociatedObject(cell, &storeKey, currStore, OBJC_ASSOCIATION_RETAIN);
+		//objc_setAssociatedObject(cell, &storeKey, currStore, OBJC_ASSOCIATION_RETAIN);
 
 
 		NSString *title = MSHookIvar<NSString*>(cell, "_title");
@@ -572,7 +564,7 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 	NSURL* actionURL = [NSURL URLWithString:[withPrefix stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 
-	EKEventStore *store = objc_getAssociatedObject(self, &storeKey);
+	EKEventStore *store = [[EKEventStore alloc] init];
 
 	EKReminder *data = (EKReminder*)[store calendarItemWithIdentifier:ident];
 
@@ -580,10 +572,12 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
 	NSError *saveError = nil;
 	[store saveReminder:data commit:YES error:&saveError];
+	NSLog(@"Error: %@", saveError);
 
 	[disambiguationAlert dismissWithClickedButtonIndex:0 animated:YES];
 	disambiguationAlert = nil;
 
+	[store release];
 }
 
 
@@ -679,7 +673,6 @@ bool determinePerson(NSString* rawText, NSInteger type)
 	objc_setAssociatedObject(self, &possibleNumbers, nil, OBJC_ASSOCIATION_RETAIN);
 	objc_setAssociatedObject(self, &possibleLabels, nil, OBJC_ASSOCIATION_RETAIN);
 	objc_setAssociatedObject(self, &reminderKey, nil, OBJC_ASSOCIATION_RETAIN);
-	objc_setAssociatedObject(self, &storeKey, nil, OBJC_ASSOCIATION_RETAIN);
 }
 
 
@@ -935,6 +928,10 @@ bool determinePerson(NSString* rawText, NSInteger type)
 
             NSError *saveError = nil;
             [store saveReminder:data commit:YES error:&saveError];
+
+            NSLog(@"Error: %@", saveError);
+
+            [store release];
 
 		}
 }
